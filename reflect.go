@@ -9,15 +9,15 @@ import (
 
 // validateValue 校验单个值:应用字段规则、dive 元素、嵌套递归。
 // path 为错误路径前缀(顶层为空串)。
-func (v *Validator) validateValue(rv reflect.Value, path string, rules []Rule, dive bool, diveRules []Rule, nested bool) error {
+func (v *Validator) validateValue(rv reflect.Value, path string, rules []Rule, dive bool, diveRules []Rule, nested bool, parent reflect.Value) error {
 	// 解引用指针:空指针只应用字段规则(required 可拦截),不递归。
 	for rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
-			return v.applyRules(rv, path, rules)
+			return v.applyRules(rv, path, rules, parent)
 		}
 		rv = rv.Elem()
 	}
-	if err := v.applyRules(rv, path, rules); err != nil {
+	if err := v.applyRules(rv, path, rules, parent); err != nil {
 		return err
 	}
 	if dive {
@@ -54,7 +54,7 @@ func (v *Validator) validateElement(rv reflect.Value, path string, diveRules []R
 		}
 		rv = rv.Elem()
 	}
-	if err := v.applyRules(rv, path, diveRules); err != nil {
+	if err := v.applyRules(rv, path, diveRules, reflect.Value{}); err != nil {
 		return err
 	}
 	if rv.Kind() == reflect.Struct {
@@ -64,12 +64,12 @@ func (v *Validator) validateElement(rv reflect.Value, path string, diveRules []R
 }
 
 // applyRules 顺序执行规则,omitempty 且为空时跳过后续规则。
-func (v *Validator) applyRules(rv reflect.Value, path string, rules []Rule) error {
+func (v *Validator) applyRules(rv reflect.Value, path string, rules []Rule, parent reflect.Value) error {
 	for _, rule := range rules {
 		if rule.name == "omitempty" && isEmpty(rv) {
 			break
 		}
-		if err := v.evalRule(rule, rv, path); err != nil {
+		if err := v.evalRule(rule, rv, path, parent); err != nil {
 			return err
 		}
 	}
@@ -91,7 +91,7 @@ func (v *Validator) validateStruct(rv reflect.Value, path string) error {
 		if path != "" {
 			fpath = path + "." + fr.name
 		}
-		if err := v.validateValue(rv.Field(fr.index), fpath, fr.rules, fr.dive, fr.diveRules, fr.nested); err != nil {
+		if err := v.validateValue(rv.Field(fr.index), fpath, fr.rules, fr.dive, fr.diveRules, fr.nested, rv); err != nil {
 			errs = append(errs, err)
 		}
 	}

@@ -307,7 +307,7 @@ func TestInvalidRules(t *testing.T) {
 func TestEvalRuleUnknownDirect(t *testing.T) {
 	// evalRule 防御分支:未知规则(正常路径已被编译层拦截)。
 	v := newTestValidator(t)
-	err := v.evalRule(Rule{name: "nosuchrule"}, reflect.ValueOf("x"), "F")
+	err := v.evalRule(Rule{name: "nosuchrule"}, reflect.ValueOf("x"), "F", reflect.Value{})
 	if err == nil {
 		t.Fatal("直接调用未知规则应报错")
 	}

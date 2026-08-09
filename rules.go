@@ -45,6 +45,11 @@ var builtinRules = map[string]ruleMeta{
 	"lt":       {needsParam: true},
 	"gte":      {needsParam: true},
 	"lte":      {needsParam: true},
+	// v0.3.0 跨字段
+	"eqfield": {needsParam: true},
+	"nefield": {needsParam: true},
+	"eq":      {needsParam: true},
+	"ne":      {needsParam: true},
 }
 
 // uuidPattern 是标准 UUID 格式(8-4-4-4-12)。
@@ -138,7 +143,7 @@ func isEmpty(v reflect.Value) bool {
 
 // evalRule 对值执行单条规则,返回 nil 或字段错误。
 // 调用方保证 rv 已解引用且非 nil。
-func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string) error {
+func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent reflect.Value) error {
 	switch rule.name {
 	case "required":
 		if isEmpty(rv) {
@@ -228,6 +233,25 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string) error {
 		}
 	case "gt", "lt", "gte", "lte":
 		return v.evalCompareRule(rule, rv, path)
+	case "eqfield", "nefield":
+		if !parent.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
+		}
+		other := derefValue(parent.FieldByName(rule.param))
+		if !other.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 引用了不存在的字段 %q", rule.name, rule.param)
+		}
+		equal := reflect.DeepEqual(other.Interface(), rv.Interface())
+		if (rule.name == "eqfield" && !equal) || (rule.name == "nefield" && equal) {
+			return v.fieldErr(path, rule.name, "字段与 %s 不满足 %s", rule.param, rule.name)
+		}
+	case "eq", "ne":
+		equal := stringify(rv) == rule.param
+		if (rule.name == "eq" && !equal) || (rule.name == "ne" && equal) {
+			return v.fieldErr(path, rule.name, "取值不满足 %s=%s", rule.name, rule.param)
+		}
 	default:
 		if fn, ok := v.customFn(rule.name); ok {
 			if err := fn(rv.Interface(), rule.param, path); err != nil {
@@ -243,6 +267,17 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string) error {
 		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "未知规则 %q", rule.name)
 	}
 	return nil
+}
+
+// derefValue 解引用指针到最终值(空指针原样返回)。
+func derefValue(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return v
+		}
+		v = v.Elem()
+	}
+	return v
 }
 
 // checkStringRule 校验字符串规则,非字符串类型直接失败。

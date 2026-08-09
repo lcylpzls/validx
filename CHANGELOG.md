@@ -30,3 +30,15 @@
   datetime / gt / lt / gte / lte;
 - 自定义规则错误:errx 透传,普通错误自动包装字段信息;
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.3.0] - 2026-08-09
+
+### 新增
+
+- 跨字段规则:eqfield / nefield(同结构体字段比较,编译期校验引用),
+  eq / ne(常量比较,数值/布尔自动字符串化);
+- 跨字段支持指针字段自动解引用比较;
+- dive 元素使用跨字段规则时明确报 VALIDX_INVALID_RULE;
+- 示例:用户注册(跨字段确认)、订单参数(dive 元素);
+- CI 新增 examples job;
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。

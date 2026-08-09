@@ -3,7 +3,7 @@
 自研 tag 驱动参数校验库:声明式规则、嵌套结构体、dive 元素校验、
 errx 聚合错误,零第三方依赖。
 
-> 当前状态:**v0.2.0 实现完成,待 CI 验证与发布**。
+> 当前状态:**v0.3.0 实现完成,待 CI 验证与发布**。
 
 ## 定位
 
@@ -22,6 +22,7 @@ validx 不是表达式引擎,不解决「复杂条件逻辑」的问题;它解�
   datetime / gt / lt / gte / lte;
 - 自定义规则:`RegisterValidation(name, fn)` 实例级注册;
 - 单字段校验:`ValidateField(value, rules)`;
+- 跨字段规则:`eqfield` / `nefield` / `eq` / `ne`;
 - 嵌套结构体自动递归,slice / map 元素经 dive 校验;
 - 聚合错误统一 errx(字段路径 + 规则名)。
 
@@ -54,6 +55,8 @@ if err := v.Validate(user); err != nil {
 
 - [docs/README.md](docs/README.md) — 文档索引
 - [docs/validation-research.md](docs/validation-research.md) — 校验领域调研手册
+- [examples/basic](examples/basic) — 用户注册(跨字段确认)
+- [examples/order](examples/order) — 订单参数(dive 元素)
 
 ## License
 

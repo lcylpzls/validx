@@ -78,6 +78,20 @@ func (v *Validator) parseType(t reflect.Type) (*structRules, error) {
 				fr.rules = append(fr.rules, rule)
 			}
 		}
+		// 跨字段规则:引用字段必须存在且已导出。
+		for _, rule := range fr.rules {
+			if rule.name == "eqfield" || rule.name == "nefield" {
+				other, ok := t.FieldByName(rule.param)
+				if !ok {
+					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+						"字段 %s 的跨字段规则引用了不存在的字段 %q", f.Name, rule.param)
+				}
+				if !other.IsExported() {
+					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+						"字段 %s 的跨字段规则不能引用未导出字段 %q", f.Name, rule.param)
+				}
+			}
+		}
 		if isStructType(f.Type) {
 			fr.nested = true
 		}

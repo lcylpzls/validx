@@ -71,7 +71,7 @@ func (v *Validator) ValidateField(value any, rules string) error {
 		}
 		rv = rv.Elem()
 	}
-	return v.applyRules(rv, "value", compiled)
+	return v.applyRules(rv, "value", compiled, reflect.Value{})
 }
 
 // compileFieldRules 解析并缓存单字段规则串。
