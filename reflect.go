@@ -50,7 +50,7 @@ func (v *Validator) validateValue(rv reflect.Value, path string, rules []Rule, d
 func (v *Validator) validateElement(rv reflect.Value, path string, diveRules []Rule) error {
 	for rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
-			return nil // 空元素无规则可应用(required 由 dive 规则处理)
+			break // 保持 nil 指针,让 required 等规则判定
 		}
 		rv = rv.Elem()
 	}
@@ -95,6 +95,11 @@ func (v *Validator) validateStruct(rv reflect.Value, path string) error {
 			errs = append(errs, err)
 		}
 	}
+	return joinErrs(errs)
+}
+
+// joinErrs 聚合错误:空返回 nil,单错误透传,多错误 errx.Join。
+func joinErrs(errs []error) error {
 	if len(errs) == 0 {
 		return nil
 	}

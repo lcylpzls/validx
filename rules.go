@@ -60,7 +60,7 @@ var uuidPattern = regexp.MustCompile(
 type Rule struct {
 	name    string
 	param   string
-	limit   int64    // min/max/len/gt/lt/gte/lte 预解析参数
+	limit   float64  // min/max/len/gt/lt/gte/lte 预解析参数(支持小数)
 	options []string // oneof 预拆分枚举
 	regexp  *regexp.Regexp
 }
@@ -101,10 +101,10 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 			}
 			rule.regexp = re
 		case "min", "max", "len", "gt", "lt", "gte", "lte":
-			limit, err := strconv.ParseInt(param, 10, 64)
+			limit, err := strconv.ParseFloat(param, 64)
 			if err != nil {
 				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
-					"规则 %s 参数必须是整数:%q", name, param)
+					"规则 %s 参数必须是数值:%q", name, param)
 			}
 			rule.limit = limit
 		case "oneof":
@@ -318,19 +318,19 @@ func (v *Validator) evalCompareRule(rule Rule, rv reflect.Value, path string) er
 	switch rule.name {
 	case "gt":
 		if n <= limit {
-			return v.fieldErr(path, rule.name, "值 %d 必须大于 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 必须大于 %v", n, limit)
 		}
 	case "lt":
 		if n >= limit {
-			return v.fieldErr(path, rule.name, "值 %d 必须小于 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 必须小于 %v", n, limit)
 		}
 	case "gte":
 		if n < limit {
-			return v.fieldErr(path, rule.name, "值 %d 必须大于等于 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 必须大于等于 %v", n, limit)
 		}
 	case "lte":
 		if n > limit {
-			return v.fieldErr(path, rule.name, "值 %d 必须小于等于 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 必须小于等于 %v", n, limit)
 		}
 	}
 	return nil
@@ -347,15 +347,15 @@ func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) err
 	switch rule.name {
 	case "min":
 		if n < limit {
-			return v.fieldErr(path, rule.name, "值 %d 小于下限 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 小于下限 %v", n, limit)
 		}
 	case "max":
 		if n > limit {
-			return v.fieldErr(path, rule.name, "值 %d 超过上限 %d", n, limit)
+			return v.fieldErr(path, rule.name, "值 %v 超过上限 %v", n, limit)
 		}
 	case "len":
 		if n != limit {
-			return v.fieldErr(path, rule.name, "长度 %d 不等于 %d", n, limit)
+			return v.fieldErr(path, rule.name, "长度 %v 不等于 %v", n, limit)
 		}
 	}
 	return nil
@@ -363,22 +363,18 @@ func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) err
 
 // numericLength 将值归一为可比较的数值:
 // 数值类型取数值,字符串取字符数,容器取元素数。
-func numericLength(rv reflect.Value) (int64, bool) {
+func numericLength(rv reflect.Value) (float64, bool) {
 	switch rv.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return rv.Int(), true
+		return float64(rv.Int()), true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		u := rv.Uint()
-		if u > uint64(^uint64(0)>>1) {
-			return int64(^uint64(0) >> 1), true
-		}
-		return int64(u), true
+		return float64(rv.Uint()), true
 	case reflect.Float32, reflect.Float64:
-		return int64(rv.Float()), true
+		return rv.Float(), true
 	case reflect.String:
-		return int64(utf8.RuneCountInString(rv.String())), true
+		return float64(utf8.RuneCountInString(rv.String())), true
 	case reflect.Slice, reflect.Array, reflect.Map:
-		return int64(rv.Len()), true
+		return float64(rv.Len()), true
 	default:
 		return 0, false
 	}
@@ -404,7 +400,8 @@ func stringify(rv reflect.Value) string {
 
 // fieldErr 构造字段校验失败错误,携带 field 与 rule 字段。
 func (v *Validator) fieldErr(path, rule, format string, args ...any) error {
-	return errx.Newf(errx.KindInvalid, CodeValidationFailed, format, args...).
+	return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+		"字段 %s:%s", path, fmt.Sprintf(format, args...)).
 		WithField("field", path).
 		WithField("rule", rule)
 }

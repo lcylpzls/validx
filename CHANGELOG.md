@@ -67,3 +67,22 @@
   comparison(与 validator 全维度对比)文档;
 - 规则新增规范写入贡献指南(编译期预解析、三路径测试);
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.6.0] - 2026-08-09
+
+### 修复
+
+- dive 元素为 nil 指针时 required 失效(现正确失败);
+- float 截断比较 bug:1.9 误通过 max=1(现按浮点精确比较);
+- 数值规则参数支持小数(min=1.5 / gt=2.5 等)。
+
+### 新增
+
+- Validate 直接接受切片 / map:元素须为结构体,逐个校验并聚合,
+  路径含索引 / key;
+- 错误消息带字段路径(字段 Name:为必填项);
+- Version 常量。
+
+### 质量
+
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。

@@ -1,6 +1,7 @@
 package validx
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -114,9 +115,48 @@ func (v *Validator) Validate(value any) error {
 		}
 		rv = rv.Elem()
 	}
-	if rv.Kind() != reflect.Struct {
+	switch rv.Kind() {
+	case reflect.Struct:
+		return v.validateStruct(rv, "")
+	case reflect.Slice, reflect.Array:
+		return v.validateCollection(rv)
+	case reflect.Map:
+		return v.validateMap(rv)
+	default:
 		return errx.Newf(errx.KindInvalid, CodeValidationFailed,
-			"校验对象必须是结构体,当前类型 %s", rv.Kind())
+			"校验对象必须是结构体/切片/map,当前类型 %s", rv.Kind())
 	}
-	return v.validateStruct(rv, "")
+}
+
+// validateCollection 校验切片/数组:元素必须是结构体(解指针),逐个校验聚合。
+func (v *Validator) validateCollection(rv reflect.Value) error {
+	var errs []error
+	for i := 0; i < rv.Len(); i++ {
+		ev := derefValue(rv.Index(i))
+		if ev.Kind() != reflect.Struct {
+			return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+				"切片元素 [%d] 必须是结构体,当前类型 %s", i, ev.Kind())
+		}
+		if err := v.validateStruct(ev, fmt.Sprintf("[%d]", i)); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return joinErrs(errs)
+}
+
+// validateMap 校验 map:值必须是结构体(解指针),逐个校验聚合。
+func (v *Validator) validateMap(rv reflect.Value) error {
+	var errs []error
+	iter := rv.MapRange()
+	for iter.Next() {
+		ev := derefValue(iter.Value())
+		if ev.Kind() != reflect.Struct {
+			return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+				"map 值 [%v] 必须是结构体,当前类型 %s", iter.Key(), ev.Kind())
+		}
+		if err := v.validateStruct(ev, fmt.Sprintf("[%v]", iter.Key())); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return joinErrs(errs)
 }

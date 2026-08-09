@@ -27,7 +27,7 @@ if err := v.Validate(user); err != nil {
 type Validator struct { /* 未导出 */ }
 
 func New(opts ...Option) (*Validator, error)
-func (v *Validator) Validate(value any) error
+func (v *Validator) Validate(value any) error // 结构体 / 切片 / map(元素为结构体)
 func (v *Validator) ValidateField(value any, rules string) error // v0.2.0
 func (v *Validator) RegisterValidation(name string, fn ValidationFunc) error // v0.2.0
 ```
