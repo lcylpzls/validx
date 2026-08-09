@@ -58,9 +58,11 @@ var uuidPattern = regexp.MustCompile(
 
 // Rule 是编译后的单条规则。
 type Rule struct {
-	name   string
-	param  string
-	regexp *regexp.Regexp
+	name    string
+	param   string
+	limit   int64    // min/max/len/gt/lt/gte/lte 预解析参数
+	options []string // oneof 预拆分枚举
+	regexp  *regexp.Regexp
 }
 
 // compileRules 解析 tag 字符串为规则列表,并预编译正则。
@@ -91,12 +93,22 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 			}
 		}
 		rule := Rule{name: name, param: param}
-		if name == "regexp" {
+		switch name {
+		case "regexp":
 			re, err := regexp.Compile(param)
 			if err != nil {
 				return nil, errx.Wrap(err, errx.KindInvalid, CodeInvalidRule, "正则表达式非法")
 			}
 			rule.regexp = re
+		case "min", "max", "len", "gt", "lt", "gte", "lte":
+			limit, err := strconv.ParseInt(param, 10, 64)
+			if err != nil {
+				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+					"规则 %s 参数必须是整数:%q", name, param)
+			}
+			rule.limit = limit
+		case "oneof":
+			rule.options = strings.Fields(param)
 		}
 		rules = append(rules, rule)
 	}
@@ -170,12 +182,16 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		}
 	case "oneof":
 		val := stringify(rv)
-		for _, opt := range strings.Fields(rule.param) {
+		matched := false
+		for _, opt := range rule.options {
 			if opt == val {
-				return nil
+				matched = true
+				break
 			}
 		}
-		return v.fieldErr(path, rule.name, "取值必须在 %q 中", rule.param)
+		if !matched {
+			return v.fieldErr(path, rule.name, "取值必须在 %q 中", rule.param)
+		}
 	case "alpha":
 		return v.checkStringRule(rule, rv, path, func(s string) bool {
 			for _, r := range s {
@@ -294,15 +310,11 @@ func (v *Validator) checkStringRule(rule Rule, rv reflect.Value, path string,
 
 // evalCompareRule 执行 gt / lt / gte / lte 规则(严格/非严格数值比较)。
 func (v *Validator) evalCompareRule(rule Rule, rv reflect.Value, path string) error {
-	limit, err := strconv.ParseInt(rule.param, 10, 64)
-	if err != nil {
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule,
-			"规则 %s 参数必须是整数:%q", rule.name, rule.param)
-	}
 	n, ok := numericLength(rv)
 	if !ok {
 		return v.fieldErr(path, rule.name, "规则不适用于类型 %s", rv.Kind())
 	}
+	limit := rule.limit
 	switch rule.name {
 	case "gt":
 		if n <= limit {
@@ -327,15 +339,11 @@ func (v *Validator) evalCompareRule(rule Rule, rv reflect.Value, path string) er
 // evalLengthRule 执行 min / max / len 规则:
 // 数值比较数值大小,字符串比较字符数,容器比较元素数。
 func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) error {
-	limit, err := strconv.ParseInt(rule.param, 10, 64)
-	if err != nil {
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule,
-			"规则 %s 参数必须是整数:%q", rule.name, rule.param)
-	}
 	n, ok := numericLength(rv)
 	if !ok {
 		return v.fieldErr(path, rule.name, "规则不适用于类型 %s", rv.Kind())
 	}
+	limit := rule.limit
 	switch rule.name {
 	case "min":
 		if n < limit {

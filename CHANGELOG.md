@@ -42,3 +42,18 @@
 - 示例:用户注册(跨字段确认)、订单参数(dive 元素);
 - CI 新增 examples job;
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.4.0] - 2026-08-09
+
+### 性能
+
+- 规则参数编译期预解析:min/max/len/gt/lt/gte/lte 整数、
+  oneof 枚举拆分、regexp 预编译,消除运行时重复解析;
+- Validate 命中 566 ns → 498 ns(-12%),分配 296 B → 200 B;
+- 与 go-playground/validator 对比基准:成功路径 2 倍领先
+  (docs/performance.md);失败路径成本为 errx 结构化错误
+  (可 SetStackCapture(false) 关闭)。
+
+### 质量
+
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
