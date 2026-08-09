@@ -3,7 +3,7 @@
 自研 tag 驱动参数校验库:声明式规则、嵌套结构体、dive 元素校验、
 errx 聚合错误,零第三方依赖。
 
-> 当前状态:**v0.4.0 实现完成,待 CI 验证与发布**。
+> 当前状态:**v0.5.0 实现完成,待 CI 验证与发布**。
 
 ## 定位
 
@@ -61,8 +61,15 @@ if err := v.Validate(user); err != nil {
 
 - [docs/README.md](docs/README.md) — 文档索引
 - [docs/validation-research.md](docs/validation-research.md) — 校验领域调研手册
+- [docs/operations.md](docs/operations.md) — 规则速查与常见场景
+- [docs/comparison.md](docs/comparison.md) — 与 validator 全维度对比
 - [examples/basic](examples/basic) — 用户注册(跨字段确认)
 - [examples/order](examples/order) — 订单参数(dive 元素)
+
+## 贡献与安全
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — 开发流程与质量门槛
+- [SECURITY.md](SECURITY.md) — 安全说明与漏洞报告
 
 ## License
 

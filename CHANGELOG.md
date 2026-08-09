@@ -57,3 +57,13 @@
 ### 质量
 
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.5.0] - 2026-08-09
+
+### 治理与文档
+
+- SECURITY.md、CODEOWNERS、CONTRIBUTING、issue/PR 模板;
+- operations(规则速查/场景)、quality(质量门槛)、release(发布流程)、
+  comparison(与 validator 全维度对比)文档;
+- 规则新增规范写入贡献指南(编译期预解析、三路径测试);
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
