@@ -105,3 +105,13 @@
 - 网络规则:ipv4 / ipv6 / hostname(RFC 1123)/ fqdn / port;
 - 规则面累计 41 个,覆盖日常校验场景;
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.9.0] - 2026-08-09
+
+### 正式版预备
+
+- 规则总表文档化(41 条,见 docs/api-design.md);
+- 稳定性承诺写入 README(自 v1.0.0 生效);
+- 新增 FuzzValidateBatch 批量校验 fuzz(CI 三目标);
+- 基准复测与 41 规则性能确认;
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。

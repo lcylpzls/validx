@@ -38,3 +38,30 @@ func FuzzValidate(f *testing.F) {
 		_ = v.Validate(S{Name: s, Code: s, Role: s})
 	})
 }
+
+// FuzzValidateBatch 保证切片/map 批量校验路径不 panic。
+func FuzzValidateBatch(f *testing.F) {
+	f.Add("", int64(0))
+	f.Add("上海", int64(1))
+	f.Add("x", int64(2))
+	f.Fuzz(func(t *testing.T, city string, count int64) {
+		type Item struct {
+			City  string `validate:"required,min=1"`
+			Count int64  `validate:"gte=0,lte=100"`
+		}
+		v, err := New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		n := count % 4
+		if n < 0 {
+			n = -n
+		}
+		items := make([]Item, 0, n)
+		for i := int64(0); i < n; i++ {
+			items = append(items, Item{City: city, Count: count})
+		}
+		_ = v.Validate(items)
+		_ = v.Validate(map[string]Item{"k": {City: city, Count: count}})
+	})
+}

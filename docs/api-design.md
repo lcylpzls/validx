@@ -66,3 +66,23 @@ rule    // 失败规则名
 | v0.3.0 | eqfield / nefield / eq / ne / 示例 |
 | v0.4.0 | 性能优化 / 对比基准 / fuzz |
 | v0.5.0 | 工业级打磨(治理 / 文档 / vuln / apidiff) |
+
+## 7. 规则总表(v0.9.0,41 条)
+
+| 类别 | 规则 |
+| --- | --- |
+| 必填 | required / omitempty / required_if / required_unless / excluded_if |
+| 数值与长度 | min / max / len / gt / lt / gte / lte(整数与小数参数) |
+| 格式 | email / regexp / uuid / url / ip / ipv4 / ipv6 / hostname / fqdn / port / mac / base64 / json / hexadecimal / semver / datetime / boolean / numeric / alpha / alphanum |
+| 字符串 | contains / excludes / startswith / endswith |
+| 枚举 | oneof |
+| 跨字段 | eqfield / nefield / eq / ne |
+| 容器 | dive(元素规则) |
+| 跳过 | `-` |
+
+## 8. 稳定性说明
+
+- v0.1.0 – v0.8.0 累计 8 个发布版本,API 仅做向后兼容扩展;
+- 计划 v1.0.0 冻结 API;新规则以次版本发布;
+- 每个版本发布前执行:100% 覆盖率、race、staticcheck、fuzz、
+  govulncheck、apidiff 对比与三平台 CI。

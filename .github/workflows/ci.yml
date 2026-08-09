@@ -71,6 +71,9 @@ jobs:
       - name: Fuzz validate (5s)
         run: go test -run '^$' -fuzz '^FuzzValidate$' -fuzztime=5s .
 
+      - name: Fuzz batch (5s)
+        run: go test -run '^$' -fuzz '^FuzzValidateBatch$' -fuzztime=5s .
+
   examples:
     runs-on: ubuntu-latest
     steps:
