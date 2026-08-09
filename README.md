@@ -3,7 +3,7 @@
 自研 tag 驱动参数校验库:声明式规则、嵌套结构体、dive 元素校验、
 errx 聚合错误,零第三方依赖。
 
-> 当前状态:**v0.7.0 实现完成,待 CI 验证与发布**。
+> 当前状态:**v0.8.0 实现完成,待 CI 验证与发布**。
 
 ## 定位
 
@@ -27,6 +27,8 @@ validx 不是表达式引擎,不解决「复杂条件逻辑」的问题;它解�
 - 批量校验:`Validate` 直接接受切片 / map(元素为结构体);
 - 小数参数:`min=1.5` 等数值规则支持浮点比较;
 - 条件必填:`required_if` / `required_unless`;
+- 条件禁止:`excluded_if`;
+- 网络规则:`ipv4` / `ipv6` / `hostname` / `fqdn` / `port`;
 - 格式规则:`base64` / `json` / `hexadecimal` / `mac` / `semver`;
 - 字符串规则:`contains` / `excludes` / `startswith` / `endswith`;
 - 聚合错误统一 errx(字段路径 + 规则名)。

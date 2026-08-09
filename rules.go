@@ -55,6 +55,7 @@ var builtinRules = map[string]ruleMeta{
 	// v0.7.0 条件必填与格式
 	"required_if":     {needsParam: true},
 	"required_unless": {needsParam: true},
+	"excluded_if":     {needsParam: true},
 	"base64":          {},
 	"json":            {},
 	"hexadecimal":     {},
@@ -64,6 +65,12 @@ var builtinRules = map[string]ruleMeta{
 	"excludes":        {needsParam: true},
 	"startswith":      {needsParam: true},
 	"endswith":        {needsParam: true},
+	// v0.8.0 网络规则
+	"ipv4":     {},
+	"ipv6":     {},
+	"hostname": {},
+	"fqdn":     {},
+	"port":     {},
 }
 
 // uuidPattern 是标准 UUID 格式(8-4-4-4-12)。
@@ -261,6 +268,35 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		return v.checkStringRule(rule, rv, path, func(s string) bool {
 			return net.ParseIP(s) != nil
 		})
+	case "ipv4":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			ip := net.ParseIP(s)
+			return ip != nil && ip.To4() != nil
+		})
+	case "ipv6":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			ip := net.ParseIP(s)
+			return ip != nil && ip.To4() == nil
+		})
+	case "hostname":
+		return v.checkStringRule(rule, rv, path, isValidHostname)
+	case "fqdn":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return strings.Contains(s, ".") && isValidHostname(s)
+		})
+	case "port":
+		if rv.Kind() == reflect.String {
+			n, err := strconv.ParseUint(rv.String(), 10, 16)
+			if err != nil || n > 65535 {
+				return v.fieldErr(path, rule.name, "端口必须在 0-65535")
+			}
+			return nil
+		}
+		n, ok := numericLength(rv)
+		if !ok || n < 0 || n > 65535 {
+			return v.fieldErr(path, rule.name, "端口必须在 0-65535")
+		}
+		return nil
 	case "datetime":
 		if rv.Kind() != reflect.String {
 			return v.fieldErr(path, rule.name, "datetime 仅适用于字符串,当前类型 %s", rv.Kind())
@@ -309,6 +345,24 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 			(rule.name == "required_unless" && !cond)
 		if needRequired && isEmpty(rv) {
 			return v.fieldErr(path, rule.name, "字段在 %s=%s 条件下为必填项", parts[0], parts[1])
+		}
+	case "excluded_if":
+		if !parent.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
+		}
+		parts := strings.Fields(rule.param)
+		if len(parts) != 2 {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 参数格式应为 字段名 值,got %q", rule.name, rule.param)
+		}
+		other := derefValue(parent.FieldByName(parts[0]))
+		if !other.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 引用了不存在的字段 %q", rule.name, parts[0])
+		}
+		if stringify(other) == parts[1] && !isEmpty(rv) {
+			return v.fieldErr(path, rule.name, "字段在 %s=%s 条件下必须为空", parts[0], parts[1])
 		}
 	case "base64":
 		return v.checkStringRule(rule, rv, path, func(s string) bool {
@@ -377,6 +431,30 @@ func derefValue(v reflect.Value) reflect.Value {
 		v = v.Elem()
 	}
 	return v
+}
+
+// isValidHostname 校验 RFC 1123 主机名:
+// 点分标签,每标签 1-63 字符,字母数字与连字符,首尾不能为连字符。
+func isValidHostname(s string) bool {
+	if s == "" || len(s) > 253 {
+		return false
+	}
+	for _, label := range strings.Split(s, ".") {
+		if label == "" || len(label) > 63 {
+			return false
+		}
+		if label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(label); i++ {
+			c := label[i]
+			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' ||
+				c >= '0' && c <= '9' || c == '-') {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // checkStringRule 校验字符串规则,非字符串类型直接失败。

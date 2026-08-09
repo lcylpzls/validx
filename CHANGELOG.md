@@ -96,3 +96,12 @@
 - 字符串规则:contains / excludes / startswith / endswith;
 - 条件必填不适用于 dive 元素(明确报错);
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.8.0] - 2026-08-09
+
+### 新增
+
+- 条件禁止:excluded_if(字段等于指定值时当前字段必须为空);
+- 网络规则:ipv4 / ipv6 / hostname(RFC 1123)/ fqdn / port;
+- 规则面累计 41 个,覆盖日常校验场景;
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。

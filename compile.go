@@ -82,9 +82,11 @@ func (v *Validator) parseType(t reflect.Type) (*structRules, error) {
 		// 跨字段规则:引用字段必须存在且已导出。
 		for _, rule := range fr.rules {
 			if rule.name == "eqfield" || rule.name == "nefield" ||
-				rule.name == "required_if" || rule.name == "required_unless" {
+				rule.name == "required_if" || rule.name == "required_unless" ||
+				rule.name == "excluded_if" {
 				fieldName := rule.param
-				if rule.name == "required_if" || rule.name == "required_unless" {
+				if rule.name == "required_if" || rule.name == "required_unless" ||
+					rule.name == "excluded_if" {
 					parts := strings.Fields(rule.param)
 					if len(parts) != 2 {
 						return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,

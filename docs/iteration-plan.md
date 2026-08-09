@@ -49,6 +49,8 @@
 - v0.7.0:条件必填(required_if / required_unless,编译期校验引用);
   格式规则(base64 / json / hexadecimal / mac / semver);
   字符串规则(contains / excludes / startswith / endswith)。
+- v0.8.0:条件禁止(excluded_if);网络规则(ipv4 / ipv6 / hostname /
+  fqdn / port);规则面累计 41 个,覆盖日常校验场景。
 
 ## 2. 质量门槛(每阶段强制)
 
