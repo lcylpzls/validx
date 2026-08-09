@@ -106,18 +106,18 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 		name = strings.TrimSpace(name)
 		param = strings.TrimSpace(param)
 		if !validRuleName(name) {
-			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "非法规则名 %q", name)
+			return nil, errx.NewCodef(CodeInvalidRule, "非法规则名 %q", name)
 		}
 		meta, ok, isCustom := v.ruleMeta(name)
 		if !ok {
-			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "未知规则 %q", name)
+			return nil, errx.NewCodef(CodeInvalidRule, "未知规则 %q", name)
 		}
 		if !isCustom {
 			if meta.needsParam && !hasParam {
-				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 缺少参数", name)
+				return nil, errx.NewCodef(CodeInvalidRule, "规则 %s 缺少参数", name)
 			}
 			if !meta.needsParam && hasParam {
-				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 不接受参数", name)
+				return nil, errx.NewCodef(CodeInvalidRule, "规则 %s 不接受参数", name)
 			}
 		}
 		rule := Rule{name: name, param: param}
@@ -125,13 +125,13 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 		case "regexp":
 			re, err := regexp.Compile(param)
 			if err != nil {
-				return nil, errx.Wrap(err, errx.KindInvalid, CodeInvalidRule, "正则表达式非法")
+				return nil, errx.WrapCode(err, CodeInvalidRule, "正则表达式非法")
 			}
 			rule.regexp = re
 		case "min", "max", "len", "gt", "lt", "gte", "lte":
 			limit, err := strconv.ParseFloat(param, 64)
 			if err != nil {
-				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				return nil, errx.NewCodef(CodeInvalidRule,
 					"规则 %s 参数必须是数值:%q", name, param)
 			}
 			rule.limit = limit
@@ -308,12 +308,12 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		return v.evalCompareRule(rule, rv, path)
 	case "eqfield", "nefield":
 		if !parent.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
 		}
 		other := derefValue(parent.FieldByName(rule.param))
 		if !other.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 引用了不存在的字段 %q", rule.name, rule.param)
 		}
 		equal := reflect.DeepEqual(other.Interface(), rv.Interface())
@@ -327,17 +327,17 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		}
 	case "required_if", "required_unless":
 		if !parent.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
 		}
 		parts := strings.Fields(rule.param)
 		if len(parts) != 2 {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 参数格式应为 字段名 值,got %q", rule.name, rule.param)
 		}
 		other := derefValue(parent.FieldByName(parts[0]))
 		if !other.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 引用了不存在的字段 %q", rule.name, parts[0])
 		}
 		cond := stringify(other) == parts[1]
@@ -348,17 +348,17 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		}
 	case "excluded_if":
 		if !parent.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
 		}
 		parts := strings.Fields(rule.param)
 		if len(parts) != 2 {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 参数格式应为 字段名 值,got %q", rule.name, rule.param)
 		}
 		other := derefValue(parent.FieldByName(parts[0]))
 		if !other.IsValid() {
-			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			return errx.NewCodef(CodeInvalidRule,
 				"规则 %s 引用了不存在的字段 %q", rule.name, parts[0])
 		}
 		if stringify(other) == parts[1] && !isEmpty(rv) {
@@ -411,13 +411,13 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 				if _, isErr := errx.As(err); isErr {
 					return err
 				}
-				return errx.Wrap(err, errx.KindInvalid, CodeValidationFailed, "自定义规则校验失败").
+				return errx.WrapCode(err, CodeValidationFailed, "自定义规则校验失败").
 					WithField("field", path).
 					WithField("rule", rule.name)
 			}
 			return nil
 		}
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "未知规则 %q", rule.name)
+		return errx.NewCodef(CodeInvalidRule, "未知规则 %q", rule.name)
 	}
 	return nil
 }
@@ -561,7 +561,7 @@ func stringify(rv reflect.Value) string {
 
 // fieldErr 构造字段校验失败错误,携带 field 与 rule 字段。
 func (v *Validator) fieldErr(path, rule, format string, args ...any) error {
-	return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+	return errx.NewCodef(CodeValidationFailed,
 		"字段 %s:%s", path, fmt.Sprintf(format, args...)).
 		WithField("field", path).
 		WithField("rule", rule)

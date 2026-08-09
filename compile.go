@@ -67,7 +67,7 @@ func (v *Validator) parseType(t reflect.Type) (*structRules, error) {
 		for _, rule := range rules {
 			if rule.name == "dive" {
 				if fr.dive {
-					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+					return nil, errx.NewCodef(CodeInvalidRule,
 						"字段 %s 出现多个 dive", f.Name)
 				}
 				fr.dive = true
@@ -89,18 +89,18 @@ func (v *Validator) parseType(t reflect.Type) (*structRules, error) {
 					rule.name == "excluded_if" {
 					parts := strings.Fields(rule.param)
 					if len(parts) != 2 {
-						return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+						return nil, errx.NewCodef(CodeInvalidRule,
 							"字段 %s 的 %s 参数格式应为 字段名 值", f.Name, rule.name)
 					}
 					fieldName = parts[0]
 				}
 				other, ok := t.FieldByName(fieldName)
 				if !ok {
-					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+					return nil, errx.NewCodef(CodeInvalidRule,
 						"字段 %s 的 %s 引用了不存在的字段 %q", f.Name, rule.name, fieldName)
 				}
 				if !other.IsExported() {
-					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+					return nil, errx.NewCodef(CodeInvalidRule,
 						"字段 %s 的 %s 不能引用未导出字段 %q", f.Name, rule.name, fieldName)
 				}
 			}

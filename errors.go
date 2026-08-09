@@ -12,5 +12,7 @@ const (
 
 func init() {
 	errx.RegisterCode(CodeInvalidRule, "校验规则语法或参数非法")
+	errx.RegisterCodeKind(CodeInvalidRule, errx.KindInvalid)
 	errx.RegisterCode(CodeValidationFailed, "字段校验失败")
+	errx.RegisterCodeKind(CodeValidationFailed, errx.KindInvalid)
 }

@@ -41,13 +41,13 @@ func New(opts ...Option) (*Validator, error) {
 // 规则名须合法且不与内置规则冲突;重复注册同名规则以最后一次为准。
 func (v *Validator) RegisterValidation(name string, fn ValidationFunc) error {
 	if !validRuleName(name) {
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "非法规则名 %q", name)
+		return errx.NewCodef(CodeInvalidRule, "非法规则名 %q", name)
 	}
 	if _, ok := builtinRules[name]; ok {
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %q 与内置规则冲突", name)
+		return errx.NewCodef(CodeInvalidRule, "规则 %q 与内置规则冲突", name)
 	}
 	if fn == nil {
-		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %q 的校验函数不能为空", name)
+		return errx.NewCodef(CodeInvalidRule, "规则 %q 的校验函数不能为空", name)
 	}
 	v.mu.Lock()
 	if v.custom == nil {
@@ -86,7 +86,7 @@ func (v *Validator) compileFieldRules(tag string) ([]Rule, error) {
 	}
 	for _, r := range rules {
 		if r.name == "dive" {
-			return nil, errx.New(errx.KindInvalid, CodeInvalidRule,
+			return nil, errx.NewCode(CodeInvalidRule,
 				"ValidateField 不支持 dive 规则")
 		}
 	}
@@ -107,11 +107,11 @@ func (v *Validator) customFn(name string) (ValidationFunc, bool) {
 func (v *Validator) Validate(value any) error {
 	rv := reflect.ValueOf(value)
 	if !rv.IsValid() {
-		return errx.New(errx.KindInvalid, CodeValidationFailed, "校验对象不能为 nil")
+		return errx.NewCode(CodeValidationFailed, "校验对象不能为 nil")
 	}
 	for rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
-			return errx.New(errx.KindInvalid, CodeValidationFailed, "校验对象不能为空指针")
+			return errx.NewCode(CodeValidationFailed, "校验对象不能为空指针")
 		}
 		rv = rv.Elem()
 	}
@@ -123,7 +123,7 @@ func (v *Validator) Validate(value any) error {
 	case reflect.Map:
 		return v.validateMap(rv)
 	default:
-		return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+		return errx.NewCodef(CodeValidationFailed,
 			"校验对象必须是结构体/切片/map,当前类型 %s", rv.Kind())
 	}
 }
@@ -134,7 +134,7 @@ func (v *Validator) validateCollection(rv reflect.Value) error {
 	for i := 0; i < rv.Len(); i++ {
 		ev := derefValue(rv.Index(i))
 		if ev.Kind() != reflect.Struct {
-			return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+			return errx.NewCodef(CodeValidationFailed,
 				"切片元素 [%d] 必须是结构体,当前类型 %s", i, ev.Kind())
 		}
 		if err := v.validateStruct(ev, fmt.Sprintf("[%d]", i)); err != nil {
@@ -151,7 +151,7 @@ func (v *Validator) validateMap(rv reflect.Value) error {
 	for iter.Next() {
 		ev := derefValue(iter.Value())
 		if ev.Kind() != reflect.Struct {
-			return errx.Newf(errx.KindInvalid, CodeValidationFailed,
+			return errx.NewCodef(CodeValidationFailed,
 				"map 值 [%v] 必须是结构体,当前类型 %s", iter.Key(), ev.Kind())
 		}
 		if err := v.validateStruct(ev, fmt.Sprintf("[%v]", iter.Key())); err != nil {

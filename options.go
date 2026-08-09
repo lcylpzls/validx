@@ -26,7 +26,7 @@ func WithTagName(name string) Option {
 // validateConfig 校验配置参数。
 func validateConfig(cfg config) error {
 	if cfg.tagName == "" {
-		return errx.New(errx.KindInvalid, CodeInvalidRule, "tag 名不能为空")
+		return errx.NewCode(CodeInvalidRule, "tag 名不能为空")
 	}
 	return nil
 }

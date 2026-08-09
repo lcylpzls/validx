@@ -182,7 +182,7 @@ func TestRegisterValidation(t *testing.T) {
 	if err := v.RegisterValidation("even", func(value any, _ string, path string) error {
 		n, ok := value.(int)
 		if !ok || n%2 != 0 {
-			return errx.Newf(errx.KindInvalid, CodeValidationFailed, "必须为偶数").
+			return errx.NewCodef(CodeValidationFailed, "必须为偶数").
 				WithField("field", path).WithField("rule", "even")
 		}
 		return nil
