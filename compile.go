@@ -95,7 +95,14 @@ func isStructType(t reflect.Type) bool {
 }
 
 // ruleMeta 查询规则元信息:先内置,后自定义(v0.2.0 起)。
-func (v *Validator) ruleMeta(name string) (ruleMeta, bool) {
-	m, ok := builtinRules[name]
-	return m, ok
+// ruleMeta 查询规则元信息:内置规则与自定义规则。
+// 返回是否命中及是否为自定义规则(自定义规则参数可选)。
+func (v *Validator) ruleMeta(name string) (ruleMeta, bool, bool) {
+	if m, ok := builtinRules[name]; ok {
+		return m, true, false
+	}
+	if _, ok := v.customFn(name); ok {
+		return ruleMeta{}, true, true
+	}
+	return ruleMeta{}, false, false
 }

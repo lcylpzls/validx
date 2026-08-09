@@ -19,3 +19,14 @@
 - 聚合错误统一 errx(字段路径 + 规则名);
 - 配置:WithTagName 自定义 tag 名;
 - 零第三方依赖;覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.2.0] - 2026-08-09
+
+### 新增
+
+- RegisterValidation:实例级自定义规则注册(参数可选,可覆盖,不与内置冲突);
+- ValidateField:单字段校验(规则串缓存,不支持 dive);
+- 规则扩充:alpha / alphanum / numeric / boolean / uuid / url / ip /
+  datetime / gt / lt / gte / lte;
+- 自定义规则错误:errx 透传,普通错误自动包装字段信息;
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。

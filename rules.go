@@ -2,11 +2,15 @@ package validx
 
 import (
 	"fmt"
+	"net"
 	"net/mail"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/lcylpzls/errx"
@@ -28,7 +32,24 @@ var builtinRules = map[string]ruleMeta{
 	"regexp":    {needsParam: true},
 	"oneof":     {needsParam: true},
 	"dive":      {},
+	// v0.2.0 扩充
+	"alpha":    {},
+	"alphanum": {},
+	"numeric":  {},
+	"boolean":  {},
+	"uuid":     {},
+	"url":      {},
+	"ip":       {},
+	"datetime": {needsParam: true},
+	"gt":       {needsParam: true},
+	"lt":       {needsParam: true},
+	"gte":      {needsParam: true},
+	"lte":      {needsParam: true},
 }
+
+// uuidPattern 是标准 UUID 格式(8-4-4-4-12)。
+var uuidPattern = regexp.MustCompile(
+	`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 // Rule 是编译后的单条规则。
 type Rule struct {
@@ -52,15 +73,17 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 		if !validRuleName(name) {
 			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "非法规则名 %q", name)
 		}
-		meta, ok := v.ruleMeta(name)
+		meta, ok, isCustom := v.ruleMeta(name)
 		if !ok {
 			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "未知规则 %q", name)
 		}
-		if meta.needsParam && !hasParam {
-			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 缺少参数", name)
-		}
-		if !meta.needsParam && hasParam {
-			return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 不接受参数", name)
+		if !isCustom {
+			if meta.needsParam && !hasParam {
+				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 缺少参数", name)
+			}
+			if !meta.needsParam && hasParam {
+				return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule, "规则 %s 不接受参数", name)
+			}
 		}
 		rule := Rule{name: name, param: param}
 		if name == "regexp" {
@@ -92,6 +115,9 @@ func validRuleName(name string) bool {
 // isEmpty 判断值是否为零值(required / omitempty 语义)。
 // 结构体永不视为空;time.Time 等由具体规则处理。
 func isEmpty(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
 	switch v.Kind() {
 	case reflect.String:
 		return v.Len() == 0
@@ -145,8 +171,120 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string) error {
 			}
 		}
 		return v.fieldErr(path, rule.name, "取值必须在 %q 中", rule.param)
+	case "alpha":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			for _, r := range s {
+				if !unicode.IsLetter(r) {
+					return false
+				}
+			}
+			return s != ""
+		})
+	case "alphanum":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			for _, r := range s {
+				if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+					return false
+				}
+			}
+			return s != ""
+		})
+	case "numeric":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			if s == "" {
+				return false
+			}
+			for _, r := range s {
+				if !unicode.IsDigit(r) {
+					return false
+				}
+			}
+			return true
+		})
+	case "boolean":
+		if rv.Kind() != reflect.String {
+			return v.fieldErr(path, rule.name, "boolean 仅适用于字符串,当前类型 %s", rv.Kind())
+		}
+		if _, err := strconv.ParseBool(rv.String()); err != nil {
+			return v.fieldErr(path, rule.name, "不是合法布尔字符串")
+		}
+	case "uuid":
+		return v.checkStringRule(rule, rv, path, uuidPattern.MatchString)
+	case "url":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			u, err := url.Parse(s)
+			return err == nil && u.IsAbs() && u.Host != ""
+		})
+	case "ip":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return net.ParseIP(s) != nil
+		})
+	case "datetime":
+		if rv.Kind() != reflect.String {
+			return v.fieldErr(path, rule.name, "datetime 仅适用于字符串,当前类型 %s", rv.Kind())
+		}
+		if _, err := time.Parse(rule.param, rv.String()); err != nil {
+			return v.fieldErr(path, rule.name, "时间格式不匹配 %q", rule.param)
+		}
+	case "gt", "lt", "gte", "lte":
+		return v.evalCompareRule(rule, rv, path)
 	default:
+		if fn, ok := v.customFn(rule.name); ok {
+			if err := fn(rv.Interface(), rule.param, path); err != nil {
+				if _, isErr := errx.As(err); isErr {
+					return err
+				}
+				return errx.Wrap(err, errx.KindInvalid, CodeValidationFailed, "自定义规则校验失败").
+					WithField("field", path).
+					WithField("rule", rule.name)
+			}
+			return nil
+		}
 		return errx.Newf(errx.KindInvalid, CodeInvalidRule, "未知规则 %q", rule.name)
+	}
+	return nil
+}
+
+// checkStringRule 校验字符串规则,非字符串类型直接失败。
+func (v *Validator) checkStringRule(rule Rule, rv reflect.Value, path string,
+	check func(string) bool) error {
+	if rv.Kind() != reflect.String {
+		return v.fieldErr(path, rule.name, "%s 仅适用于字符串,当前类型 %s", rule.name, rv.Kind())
+	}
+	if !check(rv.String()) {
+		return v.fieldErr(path, rule.name, "不满足规则 %s", rule.name)
+	}
+	return nil
+}
+
+// evalCompareRule 执行 gt / lt / gte / lte 规则(严格/非严格数值比较)。
+func (v *Validator) evalCompareRule(rule Rule, rv reflect.Value, path string) error {
+	limit, err := strconv.ParseInt(rule.param, 10, 64)
+	if err != nil {
+		return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+			"规则 %s 参数必须是整数:%q", rule.name, rule.param)
+	}
+	n, ok := numericLength(rv)
+	if !ok {
+		return v.fieldErr(path, rule.name, "规则不适用于类型 %s", rv.Kind())
+	}
+	switch rule.name {
+	case "gt":
+		if n <= limit {
+			return v.fieldErr(path, rule.name, "值 %d 必须大于 %d", n, limit)
+		}
+	case "lt":
+		if n >= limit {
+			return v.fieldErr(path, rule.name, "值 %d 必须小于 %d", n, limit)
+		}
+	case "gte":
+		if n < limit {
+			return v.fieldErr(path, rule.name, "值 %d 必须大于等于 %d", n, limit)
+		}
+	case "lte":
+		if n > limit {
+			return v.fieldErr(path, rule.name, "值 %d 必须小于等于 %d", n, limit)
+		}
 	}
 	return nil
 }
@@ -159,24 +297,8 @@ func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) err
 		return errx.Newf(errx.KindInvalid, CodeInvalidRule,
 			"规则 %s 参数必须是整数:%q", rule.name, rule.param)
 	}
-	var n int64
-	switch rv.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		n = rv.Int()
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		u := rv.Uint()
-		if u > uint64(^uint64(0)>>1) {
-			n = int64(^uint64(0) >> 1)
-		} else {
-			n = int64(u)
-		}
-	case reflect.Float32, reflect.Float64:
-		n = int64(rv.Float())
-	case reflect.String:
-		n = int64(utf8.RuneCountInString(rv.String()))
-	case reflect.Slice, reflect.Array, reflect.Map:
-		n = int64(rv.Len())
-	default:
+	n, ok := numericLength(rv)
+	if !ok {
 		return v.fieldErr(path, rule.name, "规则不适用于类型 %s", rv.Kind())
 	}
 	switch rule.name {
@@ -194,6 +316,29 @@ func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) err
 		}
 	}
 	return nil
+}
+
+// numericLength 将值归一为可比较的数值:
+// 数值类型取数值,字符串取字符数,容器取元素数。
+func numericLength(rv reflect.Value) (int64, bool) {
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int(), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		u := rv.Uint()
+		if u > uint64(^uint64(0)>>1) {
+			return int64(^uint64(0) >> 1), true
+		}
+		return int64(u), true
+	case reflect.Float32, reflect.Float64:
+		return int64(rv.Float()), true
+	case reflect.String:
+		return int64(utf8.RuneCountInString(rv.String())), true
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return int64(rv.Len()), true
+	default:
+		return 0, false
+	}
 }
 
 // stringify 将值转换为用于 oneof 比较的字符串。
