@@ -51,6 +51,9 @@
   字符串规则(contains / excludes / startswith / endswith)。
 - v0.8.0:条件禁止(excluded_if);网络规则(ipv4 / ipv6 / hostname /
   fqdn / port);规则面累计 41 个,覆盖日常校验场景。
+- v0.9.0:正式版预备(规则总表 / 稳定性承诺 / FuzzValidateBatch)。
+
+> 状态:v0.1.0 – v1.0.0 全部完成并发布。
 
 ## 2. 质量门槛(每阶段强制)
 
