@@ -2,6 +2,7 @@ package validx
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/lcylpzls/errx"
 )
@@ -80,15 +81,25 @@ func (v *Validator) parseType(t reflect.Type) (*structRules, error) {
 		}
 		// 跨字段规则:引用字段必须存在且已导出。
 		for _, rule := range fr.rules {
-			if rule.name == "eqfield" || rule.name == "nefield" {
-				other, ok := t.FieldByName(rule.param)
+			if rule.name == "eqfield" || rule.name == "nefield" ||
+				rule.name == "required_if" || rule.name == "required_unless" {
+				fieldName := rule.param
+				if rule.name == "required_if" || rule.name == "required_unless" {
+					parts := strings.Fields(rule.param)
+					if len(parts) != 2 {
+						return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
+							"字段 %s 的 %s 参数格式应为 字段名 值", f.Name, rule.name)
+					}
+					fieldName = parts[0]
+				}
+				other, ok := t.FieldByName(fieldName)
 				if !ok {
 					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
-						"字段 %s 的跨字段规则引用了不存在的字段 %q", f.Name, rule.param)
+						"字段 %s 的 %s 引用了不存在的字段 %q", f.Name, rule.name, fieldName)
 				}
 				if !other.IsExported() {
 					return nil, errx.Newf(errx.KindInvalid, CodeInvalidRule,
-						"字段 %s 的跨字段规则不能引用未导出字段 %q", f.Name, rule.param)
+						"字段 %s 的 %s 不能引用未导出字段 %q", f.Name, rule.name, fieldName)
 				}
 			}
 		}

@@ -1,6 +1,8 @@
 package validx
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/mail"
@@ -50,11 +52,30 @@ var builtinRules = map[string]ruleMeta{
 	"nefield": {needsParam: true},
 	"eq":      {needsParam: true},
 	"ne":      {needsParam: true},
+	// v0.7.0 条件必填与格式
+	"required_if":     {needsParam: true},
+	"required_unless": {needsParam: true},
+	"base64":          {},
+	"json":            {},
+	"hexadecimal":     {},
+	"mac":             {},
+	"semver":          {},
+	"contains":        {needsParam: true},
+	"excludes":        {needsParam: true},
+	"startswith":      {needsParam: true},
+	"endswith":        {needsParam: true},
 }
 
 // uuidPattern 是标准 UUID 格式(8-4-4-4-12)。
 var uuidPattern = regexp.MustCompile(
 	`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// macPattern 是 MAC 地址格式(冒号或连字符分隔)。
+var macPattern = regexp.MustCompile(`^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$`)
+
+// semverPattern 是语义化版本格式(可带 v 前缀/预发布/构建元数据)。
+var semverPattern = regexp.MustCompile(
+	`^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
 
 // Rule 是编译后的单条规则。
 type Rule struct {
@@ -268,6 +289,68 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		if (rule.name == "eq" && !equal) || (rule.name == "ne" && equal) {
 			return v.fieldErr(path, rule.name, "取值不满足 %s=%s", rule.name, rule.param)
 		}
+	case "required_if", "required_unless":
+		if !parent.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 需要结构体上下文(不适用于 dive 元素)", rule.name)
+		}
+		parts := strings.Fields(rule.param)
+		if len(parts) != 2 {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 参数格式应为 字段名 值,got %q", rule.name, rule.param)
+		}
+		other := derefValue(parent.FieldByName(parts[0]))
+		if !other.IsValid() {
+			return errx.Newf(errx.KindInvalid, CodeInvalidRule,
+				"规则 %s 引用了不存在的字段 %q", rule.name, parts[0])
+		}
+		cond := stringify(other) == parts[1]
+		needRequired := (rule.name == "required_if" && cond) ||
+			(rule.name == "required_unless" && !cond)
+		if needRequired && isEmpty(rv) {
+			return v.fieldErr(path, rule.name, "字段在 %s=%s 条件下为必填项", parts[0], parts[1])
+		}
+	case "base64":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			_, err := base64.StdEncoding.DecodeString(s)
+			return err == nil
+		})
+	case "json":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return json.Valid([]byte(s))
+		})
+	case "hexadecimal":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			if s == "" {
+				return false
+			}
+			for _, r := range s {
+				if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F') {
+					return false
+				}
+			}
+			return true
+		})
+	case "mac":
+		return v.checkStringRule(rule, rv, path, macPattern.MatchString)
+	case "semver":
+		return v.checkStringRule(rule, rv, path, semverPattern.MatchString)
+	case "contains":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return strings.Contains(s, rule.param)
+		})
+	case "excludes":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return !strings.Contains(s, rule.param)
+		})
+	case "startswith":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return strings.HasPrefix(s, rule.param)
+		})
+	case "endswith":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			return strings.HasSuffix(s, rule.param)
+		})
 	default:
 		if fn, ok := v.customFn(rule.name); ok {
 			if err := fn(rv.Interface(), rule.param, path); err != nil {

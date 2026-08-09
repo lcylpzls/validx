@@ -46,6 +46,9 @@
 - v0.6.0:修复 dive 元素 nil 指针绕过 required;float 截断比较 bug
   (1.9 误通过 max=1)+ 小数参数支持;Validate 支持切片/map 批量;
   错误消息带字段路径;Version 常量。
+- v0.7.0:条件必填(required_if / required_unless,编译期校验引用);
+  格式规则(base64 / json / hexadecimal / mac / semver);
+  字符串规则(contains / excludes / startswith / endswith)。
 
 ## 2. 质量门槛(每阶段强制)
 

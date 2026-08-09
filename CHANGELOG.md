@@ -86,3 +86,13 @@
 ### 质量
 
 - 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
+
+## [v0.7.0] - 2026-08-09
+
+### 新增
+
+- 条件必填:required_if / required_unless(跨字段,编译期校验引用);
+- 格式规则:base64 / json / hexadecimal / mac / semver;
+- 字符串规则:contains / excludes / startswith / endswith;
+- 条件必填不适用于 dive 元素(明确报错);
+- 覆盖率 100%,race / vet / staticcheck / fuzz / vuln 全绿。
