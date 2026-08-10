@@ -1,4 +1,4 @@
-package validx
+package core
 
 // defaultValidator 是包级默认校验器，全局规则注册与快捷校验共用。
 // 默认配置是编译期确定的合法值，New 必然成功；失败属于编程错误，

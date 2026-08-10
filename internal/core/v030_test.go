@@ -1,4 +1,4 @@
-package validx
+package core
 
 import (
 	testx "github.com/lcylpzls/testx"

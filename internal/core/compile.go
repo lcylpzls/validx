@@ -1,4 +1,4 @@
-package validx
+package core
 
 import (
 	"reflect"

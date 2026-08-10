@@ -1,4 +1,4 @@
-package validx
+package core
 
 import (
 	"encoding/base64"
