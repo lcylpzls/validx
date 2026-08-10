@@ -75,6 +75,18 @@ func (v *Validator) ValidateField(value any, rules string) error {
 	return v.applyRules(rv, "value", compiled, reflect.Value{})
 }
 
+// ValidateFieldRaw 以规则串校验单个值，但不对指针解引用（原样传给规则）。
+// 适合需要校验“指针本身”（如必须为非空指针）的场景；
+// 其余语义与 ValidateField 一致，不支持 dive。
+func (v *Validator) ValidateFieldRaw(value any, rules string) error {
+	compiled, err := v.compileFieldRules(rules)
+	if err != nil {
+		return err
+	}
+	rv := reflect.ValueOf(value)
+	return v.applyRules(rv, "value", compiled, reflect.Value{})
+}
+
 // compileFieldRules 解析并缓存单字段规则串。
 func (v *Validator) compileFieldRules(tag string) ([]Rule, error) {
 	if cached, ok := v.fieldCache.Load(tag); ok {

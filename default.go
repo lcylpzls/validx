@@ -15,6 +15,11 @@ func ValidateField(value any, rules string) error {
 	return defaultValidator.ValidateField(value, rules)
 }
 
+// ValidateFieldRaw 使用包级默认校验器校验单个值，但不对指针解引用。
+func ValidateFieldRaw(value any, rules string) error {
+	return defaultValidator.ValidateFieldRaw(value, rules)
+}
+
 // RegisterRule 全局注册自定义规则（线程安全）。
 // 规则名须合法且不与内置规则冲突；重复注册同名规则以最后一次为准。
 func RegisterRule(name string, fn ValidationFunc) error {

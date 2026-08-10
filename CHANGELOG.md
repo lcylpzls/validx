@@ -2,6 +2,19 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v1.2.1] - 2026-08-10
+
+### 新增
+
+- `ValidateFieldRaw` / 包级 `ValidateFieldRaw`：以规则串校验单个值但
+  **不对指针解引用**，适合“必须为非空指针”等校验指针本身的场景
+  （`ValidateField` 仍按原语义解引用指针到最终值）。
+
+### 质量
+
+- 根包语句覆盖率保持 100%；race / vet / staticcheck / fuzz /
+  govulncheck 全绿。
+
 ## [v1.2.0] - 2026-08-10
 
 ### 新增

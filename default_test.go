@@ -2,6 +2,7 @@ package validx
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/lcylpzls/errx"
@@ -66,4 +67,23 @@ func TestDefaultInstanceConsistent(t *testing.T) {
 	if _, ok := defaultValidator.customFn("tmp_rule"); !ok {
 		t.Fatal("全局注册应写入默认实例")
 	}
+}
+
+func TestValidateFieldRaw(t *testing.T) {
+	testx.RequireNoError(t, ValidateFieldRaw(&struct{ A int }{1}, "required"))
+	testx.RequireError(t, ValidateFieldRaw((*struct{ A int })(nil), "required"))
+	testx.RequireNoError(t, ValidateFieldRaw("abc", "required"))
+	testx.RequireErrCode(t, ValidateFieldRaw(1, "unknown_rule"), CodeInvalidRule)
+
+	// 自定义规则能拿到原始指针（不被 validx 解引用）。
+	testx.RequireNoError(t, RegisterRule("raw_ptr", func(value any, param, path string) error {
+		rv := reflect.ValueOf(value)
+		if !rv.IsValid() || rv.Kind() != reflect.Ptr || rv.IsNil() {
+			return errx.NewCode(CodeValidationFailed, "必须为非空指针")
+		}
+		return nil
+	}))
+	testx.RequireNoError(t, ValidateFieldRaw(&struct{ A int }{1}, "raw_ptr"))
+	testx.RequireError(t, ValidateFieldRaw((*struct{ A int })(nil), "raw_ptr"))
+	testx.RequireError(t, ValidateFieldRaw(42, "raw_ptr"))
 }
