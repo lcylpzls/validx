@@ -8,6 +8,13 @@
 
 - 完成调研、PRD、架构、API 草案、ADR 与迭代计划。
 
+## [v1.1.1] - 2026-08-10
+
+### 修复
+
+- examples/basic、examples/order 示例模块 go.mod 与最新依赖对齐
+  （go mod tidy），修复 main CI 示例构建失败。
+
 ## [v1.1.0] - 2026-08-10
 
 ### 变更
