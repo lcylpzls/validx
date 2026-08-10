@@ -35,18 +35,22 @@ var builtinRules = map[string]ruleMeta{
 	"oneof":     {needsParam: true},
 	"dive":      {},
 	// v0.2.0 扩充
-	"alpha":    {},
-	"alphanum": {},
-	"numeric":  {},
-	"boolean":  {},
-	"uuid":     {},
-	"url":      {},
-	"ip":       {},
-	"datetime": {needsParam: true},
-	"gt":       {needsParam: true},
-	"lt":       {needsParam: true},
-	"gte":      {needsParam: true},
-	"lte":      {needsParam: true},
+	"alpha":     {},
+	"alphanum":  {},
+	"numeric":   {},
+	"lowercase": {},
+	"uppercase": {},
+	"boolean":   {},
+	"uuid":      {},
+	"url":       {},
+	"ip":        {},
+	"datetime":  {needsParam: true},
+	"minbytes":  {needsParam: true},
+	"maxbytes":  {needsParam: true},
+	"gt":        {needsParam: true},
+	"lt":        {needsParam: true},
+	"gte":       {needsParam: true},
+	"lte":       {needsParam: true},
 	// v0.3.0 跨字段
 	"eqfield": {needsParam: true},
 	"nefield": {needsParam: true},
@@ -128,7 +132,7 @@ func (v *Validator) compileRules(tag string) ([]Rule, error) {
 				return nil, errx.WrapCode(err, CodeInvalidRule, "正则表达式非法")
 			}
 			rule.regexp = re
-		case "min", "max", "len", "gt", "lt", "gte", "lte":
+		case "min", "max", "len", "minbytes", "maxbytes", "gt", "lt", "gte", "lte":
 			limit, err := strconv.ParseFloat(param, 64)
 			if err != nil {
 				return nil, errx.NewCodef(CodeInvalidRule,
@@ -238,6 +242,32 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 			}
 			return s != ""
 		})
+	case "lowercase":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			if s == "" {
+				return false
+			}
+			for _, r := range s {
+				if unicode.IsLetter(r) && !unicode.IsLower(r) {
+					return false
+				}
+			}
+			return true
+		})
+	case "uppercase":
+		return v.checkStringRule(rule, rv, path, func(s string) bool {
+			if s == "" {
+				return false
+			}
+			for _, r := range s {
+				if unicode.IsLetter(r) && !unicode.IsUpper(r) {
+					return false
+				}
+			}
+			return true
+		})
+	case "minbytes", "maxbytes":
+		return v.evalByteLengthRule(rule, rv, path)
 	case "numeric":
 		return v.checkStringRule(rule, rv, path, func(s string) bool {
 			if s == "" {
@@ -517,6 +547,27 @@ func (v *Validator) evalLengthRule(rule Rule, rv reflect.Value, path string) err
 	case "len":
 		if n != limit {
 			return v.fieldErr(path, rule.name, "长度 %v 不等于 %v", n, limit)
+		}
+	}
+	return nil
+}
+
+// evalByteLengthRule 执行 minbytes / maxbytes 规则：按字节长度比较。
+// 仅适用于字符串（字节数对多字节字符有意义，与字符数规则区分）。
+func (v *Validator) evalByteLengthRule(rule Rule, rv reflect.Value, path string) error {
+	if rv.Kind() != reflect.String {
+		return v.fieldErr(path, rule.name, "%s 仅适用于字符串,当前类型 %s", rule.name, rv.Kind())
+	}
+	n := float64(len(rv.String()))
+	limit := rule.limit
+	switch rule.name {
+	case "minbytes":
+		if n < limit {
+			return v.fieldErr(path, rule.name, "字节数 %v 小于下限 %v", n, limit)
+		}
+	case "maxbytes":
+		if n > limit {
+			return v.fieldErr(path, rule.name, "字节数 %v 超过上限 %v", n, limit)
 		}
 	}
 	return nil

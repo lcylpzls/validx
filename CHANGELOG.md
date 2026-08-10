@@ -2,6 +2,25 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v1.2.0] - 2026-08-10
+
+### 新增
+
+- 包级默认校验器与全局规则注册：
+  - `Validate(v any)`：校验结构体；
+  - `ValidateField(value any, rules string)`：校验单个值；
+  - `RegisterRule(name string, fn ValidationFunc)`：全局注册自定义规则；
+- 内置规则扩充：
+  - `lowercase` / `uppercase`：字符串所有字母必须为小写/大写
+    （非字母字符不参与判定）；
+  - `minbytes` / `maxbytes`：字符串**字节**长度下限/上限
+    （与按字符数计数的 `min` / `max` / `len` 区分，适合多字节场景）。
+
+### 质量
+
+- 根包语句覆盖率保持 100%；race / vet / staticcheck / fuzz /
+  govulncheck 全绿。
+
 ## [v1.1.3] - 2026-08-10
 
 ### 变更
