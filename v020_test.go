@@ -2,6 +2,7 @@ package validx
 
 import (
 	"errors"
+	testx "github.com/lcylpzls/testx"
 	"strings"
 	"sync"
 	"testing"
@@ -196,13 +197,11 @@ func TestRegisterValidation(t *testing.T) {
 		t.Fatalf("自定义规则应通过:%v", err)
 	}
 	err := v.Validate(S{N: 3})
-	if err == nil {
-		t.Fatal("自定义规则应失败")
-	}
+	testx.RequireError(t, err)
+
 	e, ok := errx.As(err)
-	if !ok {
-		t.Fatalf("应为结构化错误:%v", err)
-	}
+	testx.RequireTrue(t, ok)
+
 	var hasField, hasRule bool
 	for _, f := range e.Fields() {
 		if f.Key == "field" && f.Value == "N" {
@@ -235,9 +234,8 @@ func TestRegisterValidationWithParam(t *testing.T) {
 		t.Fatalf("带参自定义规则应通过:%v", err)
 	}
 	err := v.Validate(S{Code: "XYZ-123"})
-	if err == nil {
-		t.Fatal("带参自定义规则应失败")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeValidationFailed {
 		t.Errorf("普通错误应包装为校验失败:%s", code)
 	}
@@ -294,9 +292,8 @@ func TestValidateField(t *testing.T) {
 		t.Fatalf("合法单字段应通过:%v", err)
 	}
 	err := v.ValidateField("", "required,email")
-	if err == nil {
-		t.Fatal("空值应失败")
-	}
+	testx.RequireError(t, err)
+
 	if err := v.ValidateField(nil, "required"); err == nil {
 		t.Error("nil 应触发 required 失败")
 	}

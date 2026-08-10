@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"testing"
 
@@ -24,9 +25,8 @@ func TestEqField(t *testing.T) {
 		t.Fatalf("合法跨字段应通过:%v", err)
 	}
 	err := v.Validate(RegisterForm{Password: "secret123", Confirm: "different", Username: "tom", Role: "admin", Level: 1})
-	if err == nil {
-		t.Fatal("密码不一致应失败")
-	}
+	testx.RequireError(t, err)
+
 	if e, isErr := errx.As(err); isErr {
 		for _, f := range e.Fields() {
 			if f.Key == "field" && f.Value != "Confirm" {
@@ -94,9 +94,8 @@ func TestCrossFieldInDiveRejected(t *testing.T) {
 	}
 	v := newTestValidator(t)
 	err := v.Validate(S{Items: []string{"a"}})
-	if err == nil {
-		t.Fatal("dive 元素使用跨字段规则应报错")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeInvalidRule {
 		t.Errorf("错误码 = %s,want %s", code, CodeInvalidRule)
 	}
@@ -119,7 +118,6 @@ func TestEvalRuleMissingFieldDirect(t *testing.T) {
 	v := newTestValidator(t)
 	err := v.evalRule(Rule{name: "eqfield", param: "NoSuch"},
 		reflect.ValueOf("x"), "F", reflect.ValueOf(struct{ A string }{}))
-	if err == nil {
-		t.Fatal("引用不存在字段应报错")
-	}
+	testx.RequireError(t, err)
+
 }

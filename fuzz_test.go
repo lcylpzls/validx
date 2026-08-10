@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"testing"
 )
 
@@ -13,9 +14,8 @@ func FuzzRules(f *testing.F) {
 	f.Add("dive,dive")
 	f.Fuzz(func(t *testing.T, tag string) {
 		v, err := New()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testx.RequireNoError(t, err)
+
 		_, _ = v.compileRules(tag)
 	})
 }
@@ -32,9 +32,8 @@ func FuzzValidate(f *testing.F) {
 			Role string `validate:"oneof=admin user guest"`
 		}
 		v, err := New()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testx.RequireNoError(t, err)
+
 		_ = v.Validate(S{Name: s, Code: s, Role: s})
 	})
 }
@@ -50,9 +49,8 @@ func FuzzValidateBatch(f *testing.F) {
 			Count int64  `validate:"gte=0,lte=100"`
 		}
 		v, err := New()
-		if err != nil {
-			t.Fatal(err)
-		}
+		testx.RequireNoError(t, err)
+
 		n := count % 4
 		if n < 0 {
 			n = -n

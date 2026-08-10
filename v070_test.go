@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"testing"
 
@@ -24,9 +25,8 @@ func TestRequiredIf(t *testing.T) {
 	}
 	// 条件满足但未填:失败
 	err := v.Validate(PaymentForm{Method: "card"})
-	if err == nil {
-		t.Fatal("required_if 条件满足但为空应失败")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeValidationFailed {
 		t.Errorf("错误码 = %s", code)
 	}
@@ -82,9 +82,8 @@ func TestRequiredIfInDiveRejected(t *testing.T) {
 	}
 	v := newTestValidator(t)
 	err := v.Validate(S{Items: []string{"a"}})
-	if err == nil {
-		t.Fatal("dive 元素使用条件必填应报错")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeInvalidRule {
 		t.Errorf("错误码 = %s", code)
 	}

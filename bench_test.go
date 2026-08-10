@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"testing"
 )
 
@@ -15,9 +16,8 @@ type benchUser struct {
 // BenchmarkValidate 基准:5 字段结构体验证。
 func BenchmarkValidate(b *testing.B) {
 	v, err := New()
-	if err != nil {
-		b.Fatal(err)
-	}
+	testx.RequireNoError(b, err)
+
 	u := benchUser{
 		Name:  "张三",
 		Email: "user@example.com",
@@ -35,9 +35,8 @@ func BenchmarkValidate(b *testing.B) {
 // BenchmarkValidateInvalid 基准:含失败字段的校验。
 func BenchmarkValidateInvalid(b *testing.B) {
 	v, err := New()
-	if err != nil {
-		b.Fatal(err)
-	}
+	testx.RequireNoError(b, err)
+
 	u := benchUser{Name: "x", Email: "bad", Age: -1}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -48,9 +47,8 @@ func BenchmarkValidateInvalid(b *testing.B) {
 // BenchmarkCompileOnce 基准:首次编译(缓存未命中)。
 func BenchmarkCompileOnce(b *testing.B) {
 	v, err := New()
-	if err != nil {
-		b.Fatal(err)
-	}
+	testx.RequireNoError(b, err)
+
 	u := benchUser{}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

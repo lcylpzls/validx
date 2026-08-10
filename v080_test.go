@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"testing"
 
@@ -22,9 +23,8 @@ func TestExcludedIf(t *testing.T) {
 	}
 	// 条件成立但有值:失败
 	err := v.Validate(BankForm{Method: "wallet", CardNo: "1234"})
-	if err == nil {
-		t.Fatal("条件成立但有值应失败")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeValidationFailed {
 		t.Errorf("错误码 = %s", code)
 	}

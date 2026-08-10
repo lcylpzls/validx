@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"reflect"
 	"strings"
 	"sync"
@@ -12,9 +13,8 @@ import (
 func newTestValidator(t *testing.T, opts ...Option) *Validator {
 	t.Helper()
 	v, err := New(opts...)
-	if err != nil {
-		t.Fatalf("New 失败:%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	return v
 }
 
@@ -25,9 +25,8 @@ func TestOptions(t *testing.T) {
 		t.Error("空 tag 名应非法")
 	}
 	v := newTestValidator(t, WithTagName("check"))
-	if v.cfg.tagName != "check" {
-		t.Error("自定义 tag 名未生效")
-	}
+	testx.Equal(t, v.cfg.tagName, "check")
+
 	_ = newTestValidator(t, nil)
 }
 
@@ -60,9 +59,8 @@ func TestRequired(t *testing.T) {
 		Map   map[string]int `validate:"required"`
 	}
 	err := v.Validate(Req{})
-	if err == nil {
-		t.Fatal("全零值应校验失败")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeValidationFailed {
 		t.Errorf("错误码 = %s,want %s", code, CodeValidationFailed)
 	}
@@ -155,9 +153,8 @@ func TestLengthRulesInvalidParam(t *testing.T) {
 	}
 	v := newTestValidator(t)
 	err := v.Validate(S{})
-	if err == nil {
-		t.Fatal("非法参数应报错")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeInvalidRule {
 		t.Errorf("错误码 = %s,want %s", code, CodeInvalidRule)
 	}
@@ -308,9 +305,8 @@ func TestEvalRuleUnknownDirect(t *testing.T) {
 	// evalRule 防御分支:未知规则(正常路径已被编译层拦截)。
 	v := newTestValidator(t)
 	err := v.evalRule(Rule{name: "nosuchrule"}, reflect.ValueOf("x"), "F", reflect.Value{})
-	if err == nil {
-		t.Fatal("直接调用未知规则应报错")
-	}
+	testx.RequireError(t, err)
+
 }
 
 func TestEmptyRuleSegmentIgnored(t *testing.T) {
@@ -345,22 +341,19 @@ func TestNestedStruct(t *testing.T) {
 		t.Fatalf("合法嵌套应通过:%v", err)
 	}
 	err := v.Validate(Profile{Address: Address{City: "上海"}})
-	if err == nil {
-		t.Fatal("嵌套字段失败应报错")
-	}
+	testx.RequireError(t, err)
+
 	e, isErr := errx.As(err)
-	if !isErr {
-		t.Fatalf("应为结构化错误:%v", err)
-	}
+	testx.RequireTrue(t, isErr)
+
 	hasPath := false
 	for _, f := range e.Fields() {
 		if f.Key == "field" && f.Value == "Address.ZipCode" {
 			hasPath = true
 		}
 	}
-	if !hasPath {
-		t.Errorf("嵌套路径不符:%v", e.Fields())
-	}
+	testx.True(t, hasPath)
+
 	// 指针嵌套
 	memo := &Address{City: "北京", ZipCode: "100000"}
 	if err := v.Validate(Profile{Address: okProfile.Address, Memo: memo}); err != nil {
@@ -400,14 +393,12 @@ func TestDive(t *testing.T) {
 	}
 	// map 值规则失败,路径含 key
 	err := v.Validate(S{Meta: map[string]int{"a": 1}, Plain: []int{1}})
-	if err == nil {
-		t.Fatal("map 值应失败")
-	}
+	testx.RequireError(t, err)
+
 	// 元素结构体递归
 	err = v.Validate(S{Items: []Item{{}}, Plain: []int{1}})
-	if err == nil {
-		t.Fatal("元素结构体应递归")
-	}
+	testx.RequireError(t, err)
+
 	var hasIdx bool
 	if e, ok := errx.As(err); ok {
 		for _, f := range e.Fields() {
@@ -416,9 +407,8 @@ func TestDive(t *testing.T) {
 			}
 		}
 	}
-	if !hasIdx {
-		t.Errorf("元素路径应含索引:%v", err)
-	}
+	testx.True(t, hasIdx)
+
 	// 指针元素:nil 跳过、非 nil 递归
 	type P struct {
 		Items []*Item `validate:"dive"`
@@ -449,9 +439,8 @@ type Skip struct {
 func TestSkipAndUnexported(t *testing.T) {
 	v := newTestValidator(t)
 	err := v.Validate(Skip{Name: "ok", Skip: "", priv: ""})
-	if err != nil {
-		t.Fatalf("跳过字段不应参与校验:%v", err)
-	}
+	testx.RequireNoError(t, err)
+
 	if err := v.Validate(Skip{}); err == nil {
 		t.Error("未跳过字段仍应校验")
 	}
@@ -467,17 +456,15 @@ func TestAggregateErrors(t *testing.T) {
 	}
 	v := newTestValidator(t)
 	err := v.Validate(S{})
-	if err == nil {
-		t.Fatal("多字段失败应报错")
-	}
+	testx.RequireError(t, err)
+
 	// 聚合:通过 errx.Is 检查任一字段错误码,并验证字段路径存在
 	if !errx.Is(err, CodeValidationFailed) {
 		t.Error("聚合应包含校验失败码")
 	}
 	agg, ok := err.(*errx.Aggregate)
-	if !ok {
-		t.Fatalf("多字段失败应为聚合错误:%T", err)
-	}
+	testx.RequireTrue(t, ok)
+
 	var gotA, gotB, gotC bool
 	for _, e := range agg.Errors() {
 		if ee, ok := errx.As(e); ok {

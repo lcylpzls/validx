@@ -1,6 +1,7 @@
 package validx
 
 import (
+	testx "github.com/lcylpzls/testx"
 	"strings"
 	"testing"
 
@@ -8,9 +9,8 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-	if Version != "v1.0.1" {
-		t.Errorf("Version = %s,want v1.0.1", Version)
-	}
+	testx.Equal(t, Version, "v1.1.0")
+
 }
 
 // ---------- dive 元素 nil 指针 ----------
@@ -27,9 +27,8 @@ func TestDiveNilPointerRequired(t *testing.T) {
 		t.Fatalf("合法元素应通过:%v", err)
 	}
 	err := v.Validate(S{Items: []*Item{nil}})
-	if err == nil {
-		t.Fatal("nil 元素应触发 required 失败")
-	}
+	testx.RequireError(t, err)
+
 	if code, _ := errx.CodeOf(err); code != CodeValidationFailed {
 		t.Errorf("错误码 = %s,want %s", code, CodeValidationFailed)
 	}
@@ -77,9 +76,8 @@ func TestValidateSlice(t *testing.T) {
 	}
 	bad := []Address{{City: "上海"}, {City: "北京", ZipCode: "100000"}}
 	err := v.Validate(bad)
-	if err == nil {
-		t.Fatal("切片含非法元素应失败")
-	}
+	testx.RequireError(t, err)
+
 	var hasPath bool
 	if e, ok := errx.As(err); ok {
 		for _, f := range e.Fields() {
@@ -88,9 +86,8 @@ func TestValidateSlice(t *testing.T) {
 			}
 		}
 	}
-	if !hasPath {
-		t.Errorf("切片路径应含索引:%v", err)
-	}
+	testx.True(t, hasPath)
+
 	// 空切片
 	if err := v.Validate([]Address{}); err != nil {
 		t.Fatalf("空切片应通过:%v", err)
@@ -110,9 +107,8 @@ func TestValidateMap(t *testing.T) {
 		t.Fatalf("合法 map 应通过:%v", err)
 	}
 	err := v.Validate(map[string]Address{"home": {City: "上海"}})
-	if err == nil {
-		t.Fatal("map 含非法值应失败")
-	}
+	testx.RequireError(t, err)
+
 	var hasPath bool
 	if e, ok := errx.As(err); ok {
 		for _, f := range e.Fields() {
@@ -121,9 +117,8 @@ func TestValidateMap(t *testing.T) {
 			}
 		}
 	}
-	if !hasPath {
-		t.Errorf("map 路径应含 key:%v", err)
-	}
+	testx.True(t, hasPath)
+
 	// 空 map
 	if err := v.Validate(map[string]Address{}); err != nil {
 		t.Fatalf("空 map 应通过:%v", err)
@@ -149,9 +144,8 @@ func TestValidateSliceAggregate(t *testing.T) {
 	v := newTestValidator(t)
 	bad := []Address{{}, {}}
 	err := v.Validate(bad)
-	if err == nil {
-		t.Fatal("多个非法元素应失败")
-	}
+	testx.RequireError(t, err)
+
 	if _, ok := err.(*errx.Aggregate); !ok {
 		t.Errorf("多元素失败应为聚合错误:%T", err)
 	}
@@ -165,9 +159,8 @@ func TestErrorMessageContainsPath(t *testing.T) {
 	}
 	v := newTestValidator(t)
 	err := v.Validate(S{})
-	if err == nil {
-		t.Fatal("应失败")
-	}
+	testx.RequireError(t, err)
+
 	if !strings.Contains(err.Error(), "Name") {
 		t.Errorf("错误消息应含字段路径:%v", err)
 	}
