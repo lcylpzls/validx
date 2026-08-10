@@ -66,7 +66,7 @@ func (v *Validator) ValidateField(value any, rules string) error {
 		return err
 	}
 	rv := reflect.ValueOf(value)
-	for rv.Kind() == reflect.Ptr {
+	for rv.IsValid() && rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
 			break
 		}

@@ -2,6 +2,19 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [v1.2.2] - 2026-08-10
+
+### 修复
+
+- `ValidateField` / `ValidateFieldRaw` 对 `nil` 值不再 panic：
+  内置规则按空值判定，自定义规则收到 `nil`（而非触发反射
+  `Interface()` panic），便于实现“必须为非空指针”等规则。
+
+### 质量
+
+- 根包语句覆盖率保持 100%；race / vet / staticcheck / fuzz /
+  govulncheck 全绿。
+
 ## [v1.2.1] - 2026-08-10
 
 ### 新增

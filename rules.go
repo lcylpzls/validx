@@ -437,7 +437,12 @@ func (v *Validator) evalRule(rule Rule, rv reflect.Value, path string, parent re
 		})
 	default:
 		if fn, ok := v.customFn(rule.name); ok {
-			if err := fn(rv.Interface(), rule.param, path); err != nil {
+			// 无效值（nil）以 nil 传给自定义规则，避免 Interface() panic。
+			var val any
+			if rv.IsValid() {
+				val = rv.Interface()
+			}
+			if err := fn(val, rule.param, path); err != nil {
 				if _, isErr := errx.As(err); isErr {
 					return err
 				}

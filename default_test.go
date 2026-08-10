@@ -74,6 +74,8 @@ func TestValidateFieldRaw(t *testing.T) {
 	testx.RequireError(t, ValidateFieldRaw((*struct{ A int })(nil), "required"))
 	testx.RequireNoError(t, ValidateFieldRaw("abc", "required"))
 	testx.RequireErrCode(t, ValidateFieldRaw(1, "unknown_rule"), CodeInvalidRule)
+	testx.RequireError(t, ValidateFieldRaw(nil, "required"))
+	testx.RequireError(t, ValidateField(nil, "required"))
 
 	// 自定义规则能拿到原始指针（不被 validx 解引用）。
 	testx.RequireNoError(t, RegisterRule("raw_ptr", func(value any, param, path string) error {
