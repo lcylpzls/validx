@@ -3,7 +3,7 @@
 自研 tag 驱动参数校验库:声明式规则、嵌套结构体、dive 元素校验、
 errx 聚合错误,零第三方依赖。
 
-> 当前状态:**v1.0.0 正式版,API 已冻结**。
+> 当前状态:**v1.3.1**。
 
 ## 定位
 
@@ -67,17 +67,14 @@ if err := v.Validate(user); err != nil {
 ## 稳定性承诺
 
 - 本库遵循[语义化版本](https://semver.org/lang/zh-CN/);
-- v1.0.0 起公开 API 冻结:新增规则与能力以次版本发布,
-  破坏性变更仅随主版本;
+- 家族约定:破坏性变更统一走 minor 版本(不强制主版本升级);
 - 每个版本发布前执行:100% 覆盖率、race、staticcheck、fuzz、
-  govulncheck、apidiff 对比与三平台 CI。
+  govulncheck 与三平台 CI。
 
 ## 文档
 
 - [docs/README.md](docs/README.md) — 文档索引
-- [docs/validation-research.md](docs/validation-research.md) — 校验领域调研手册
 - [docs/operations.md](docs/operations.md) — 规则速查与常见场景
-- [docs/comparison.md](docs/comparison.md) — 与 validator 全维度对比
 - [examples/basic](examples/basic) — 用户注册(跨字段确认)
 - [examples/order](examples/order) — 订单参数(dive 元素)
 

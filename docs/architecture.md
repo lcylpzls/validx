@@ -1,6 +1,6 @@
 # validx 架构设计
 
-> 版本:v0.1.0(规划稿) · 状态:评审中
+> 状态:已实现(v1.3.1),本文描述当前架构;公开 API 以 `go doc` 与 README 为准。
 
 ## 1. 总体分层
 
@@ -45,7 +45,7 @@
 ## 5. 规则层
 
 - 每条规则:名称 + 参数 + 预编译状态(regexp 预编译);
-- 内置规则见 PRD 4.2;格式类复用标准库解析器;
+- 内置规则见 `operations.md` 规则速查;格式类复用标准库解析器;
 - 自定义规则签名:`func(value any, param string, path string) error`,
   返回 errx 错误或 nil;返回普通 error 时包装为校验失败。
 
